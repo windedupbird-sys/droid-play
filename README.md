@@ -47,6 +47,38 @@ Install on a connected device:
 adb install app/build/outputs/apk/debug/app-debug.apk
 ```
 
+## Download APK on your phone (GitHub Releases)
+
+This project includes a GitHub Actions workflow that builds the APK automatically.
+
+### One-time setup
+
+1. Click **Create repo** in Cursor (or push this project to your own GitHub repository).
+2. On GitHub, open **Settings → Actions → General** and allow workflows to run.
+
+### Get the APK
+
+**Option A — Tagged release (recommended)**
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+GitHub Actions builds the APK and publishes it on the **Releases** page. Open the release on your phone’s browser and download `ColorTap.apk`.
+
+**Option B — Manual build (no tag)**
+
+1. On GitHub, go to **Actions → Build and Release APK → Run workflow**.
+2. Optionally check **Create a GitHub Release**.
+3. When the run finishes, download `ColorTap.apk` from the **Artifacts** section (or from Releases if you checked that box).
+
+### Install on Android
+
+1. Download `ColorTap.apk` to your phone.
+2. Open **Settings → Security** and allow installs from your browser or Files app.
+3. Tap the APK file and tap **Install**.
+
 ## Project Structure
 
 ```
