@@ -1,6 +1,6 @@
 # Color Tap — Play Store launch guide
 
-Everything you need to submit **Color Tap v1.1.0** to Google Play.
+Everything you need to submit **Color Tap v1.1.2** to Google Play.
 
 ## Status
 
@@ -47,7 +47,7 @@ Or add GitHub Actions secrets: `ADMOB_APP_ID`, `ADMOB_INTERSTITIAL_ID`
 
 Upload: `app/build/outputs/bundle/release/app-release.aab`
 
-Or download from GitHub Releases after tagging `v1.1.0`.
+Or download from GitHub Releases after tagging a new version (latest: `v1.1.2`).
 
 ### 3. Create Play Console account
 

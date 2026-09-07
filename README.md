@@ -53,7 +53,7 @@ See **[PLAY_STORE.md](PLAY_STORE.md)** for the full release checklist.
 
 ### AdMob setup
 
-The app shows an interstitial video ad every 6 completed games. Before publishing, replace the test AdMob IDs in `app/src/main/res/values/strings.xml` with your real IDs from the [AdMob console](https://admob.google.com/).
+The app shows an interstitial video ad every 6 completed games. Before publishing, add your real AdMob IDs to `admob.properties` (copy from `admob.properties.example`) or set `ADMOB_APP_ID` and `ADMOB_INTERSTITIAL_ID` in GitHub Actions secrets. See the [AdMob console](https://admob.google.com/).
 
 Quick start:
 
