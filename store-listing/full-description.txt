@@ -1,0 +1,12 @@
+Color Tap is a fast, simple arcade game built for quick play sessions.
+
+Colored circles appear on screen and begin fading away. Tap them before they disappear to score points. Faster taps earn more points. Miss too many circles and it is game over.
+
+Features:
+• One-touch gameplay anyone can learn in seconds
+• Difficulty increases as your score grows
+• Best score saved on your device
+• Works offline — no account required
+• Short video ads appear occasionally between games
+
+How high can you score?

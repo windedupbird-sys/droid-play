@@ -1,6 +1,11 @@
-# Google Play release checklist
+# Google Play Store
 
-Use this guide to publish **Color Tap** on the Google Play Store.
+**Ready to launch?** See **[LAUNCH.md](LAUNCH.md)** for the complete step-by-step guide.
+
+Also see:
+- **[PLAY_STORE.md](PLAY_STORE.md)** — technical checklist
+- **[DATA_SAFETY.md](DATA_SAFETY.md)** — Play Console data safety answers
+- **[CONTENT_RATING.md](CONTENT_RATING.md)** — content rating questionnaire guide
 
 ## 1. Create a Play Console account
 

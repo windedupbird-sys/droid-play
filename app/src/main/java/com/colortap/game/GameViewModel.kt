@@ -1,17 +1,23 @@
 package com.colortap.game
 
-import androidx.compose.ui.graphics.Color
+import android.app.Application
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.compose.ui.graphics.Color
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.random.Random
 
-class GameViewModel : ViewModel() {
+class GameViewModel(
+    private val preferences: GamePreferences
+) : ViewModel() {
 
-    var state = GameState()
+    var state = GameState(highScore = preferences.getHighScore())
         private set
 
     private var loopJob: Job? = null
@@ -29,7 +35,7 @@ class GameViewModel : ViewModel() {
         loopJob?.cancel()
         state = GameState(
             phase = GamePhase.PLAYING,
-            highScore = state.highScore,
+            highScore = preferences.getHighScore(),
             lastSpawnAtMs = System.currentTimeMillis()
         )
         spawnTarget()
@@ -49,10 +55,12 @@ class GameViewModel : ViewModel() {
 
         val newScore = state.score + speedBonus
         val fasterSpawns = (1400L - (newScore / 5) * 80L).coerceAtLeast(500L)
+        val newHighScore = maxOf(preferences.getHighScore(), newScore)
+        preferences.saveHighScore(newHighScore)
 
         state = state.copy(
             score = newScore,
-            highScore = maxOf(state.highScore, newScore),
+            highScore = newHighScore,
             targets = state.targets.filter { it.id != targetId },
             spawnIntervalMs = fasterSpawns
         )
@@ -77,11 +85,13 @@ class GameViewModel : ViewModel() {
 
         val remainingLives = state.lives - expired.size
         if (remainingLives <= 0) {
+            val finalHighScore = maxOf(preferences.getHighScore(), state.score)
+            preferences.saveHighScore(finalHighScore)
             state = state.copy(
                 phase = GamePhase.GAME_OVER,
                 lives = 0,
                 targets = emptyList(),
-                highScore = maxOf(state.highScore, state.score)
+                highScore = finalHighScore
             )
             loopJob?.cancel()
             return
@@ -114,5 +124,13 @@ class GameViewModel : ViewModel() {
             targets = state.targets + target,
             lastSpawnAtMs = now
         )
+    }
+
+    companion object {
+        fun factory(application: Application): ViewModelProvider.Factory = viewModelFactory {
+            initializer {
+                GameViewModel(GamePreferences(application))
+            }
+        }
     }
 }

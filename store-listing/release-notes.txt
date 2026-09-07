@@ -1,0 +1,5 @@
+Initial Play Store launch:
+• Tap-to-score arcade gameplay
+• Saved high scores
+• Occasional AdMob video ads every 6 games
+• Offline play supported

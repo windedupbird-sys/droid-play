@@ -38,12 +38,8 @@ jobs:
           if [ -n "$KEYSTORE_BASE64" ]; then
             mkdir -p release-keystore
             echo "$KEYSTORE_BASE64" | base64 -d > release-keystore/colortap-release.keystore
-            cat > keystore.properties <<EOF
-          storeFile=release-keystore/colortap-release.keystore
-          storePassword=$KEYSTORE_PASSWORD
-          keyAlias=$KEY_ALIAS
-          keyPassword=$KEY_PASSWORD
-          EOF
+            printf 'storeFile=release-keystore/colortap-release.keystore\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+              "$KEYSTORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" > keystore.properties
           fi
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -55,6 +51,9 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build release AAB
+        env:
+          ADMOB_APP_ID: ${{ secrets.ADMOB_APP_ID }}
+          ADMOB_INTERSTITIAL_ID: ${{ secrets.ADMOB_INTERSTITIAL_ID }}
         run: ./gradlew bundleRelease --no-daemon
 
       - name: Build debug APK

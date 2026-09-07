@@ -1,0 +1,5 @@
+# Copy to admob.properties and replace with your real AdMob IDs from https://admob.google.com/
+# Leave blank to use Google test ad units (safe for development, not for production revenue).
+
+admob.app_id=
+admob.interstitial_id=

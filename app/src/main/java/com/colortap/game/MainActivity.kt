@@ -1,5 +1,6 @@
 package com.colortap.game
 
+import android.app.Application
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -18,7 +19,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         adManager = InterstitialAdManager(this)
         setContent {
-            val viewModel: GameViewModel = viewModel()
+            val viewModel: GameViewModel = viewModel(factory = GameViewModel.factory(application))
             Surface(
                 modifier = Modifier.fillMaxSize(),
                 color = Color(0xFF1A1A2E)

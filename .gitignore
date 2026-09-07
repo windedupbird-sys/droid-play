@@ -27,3 +27,4 @@ android-sdk/
 *.keystore
 keystore.properties
 release-keystore/
+admob.properties

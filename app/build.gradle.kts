@@ -11,16 +11,43 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(keystorePropertiesFile.inputStream())
 }
 
+val admobPropertiesFile = rootProject.file("admob.properties")
+val admobProperties = Properties()
+if (admobPropertiesFile.exists()) {
+    admobProperties.load(admobPropertiesFile.inputStream())
+}
+
+val testAdmobAppId = "ca-app-pub-3940256099942544~3347511713"
+val testAdmobInterstitialId = "ca-app-pub-3940256099942544/1033173712"
+
+fun admobId(key: String, envName: String, testId: String): String {
+    return System.getenv(envName)
+        ?.takeIf { it.isNotBlank() }
+        ?: admobProperties.getProperty(key)?.takeIf { it.isNotBlank() }
+        ?: testId
+}
+
 android {
     namespace = "com.colortap.game"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.colortap.game"
         minSdk = 26
-        targetSdk = 34
-        versionCode = 3
-        versionName = "1.0.2"
+        targetSdk = 35
+        versionCode = 4
+        versionName = "1.1.0"
+
+        resValue(
+            "string",
+            "admob_app_id",
+            admobId("admob.app_id", "ADMOB_APP_ID", testAdmobAppId)
+        )
+        resValue(
+            "string",
+            "admob_interstitial_id",
+            admobId("admob.interstitial_id", "ADMOB_INTERSTITIAL_ID", testAdmobInterstitialId)
+        )
     }
 
     signingConfigs {
