@@ -105,13 +105,30 @@ def feature_graphic() -> Image.Image:
     img = Image.new("RGB", (1024, 500))
     gradient_bg(img, BG, BG2)
     draw = ImageDraw.Draw(img)
-    title = load_font(72, True)
-    subtitle = load_font(30)
 
-    draw.text((60, 170), "Color Tap", fill=WHITE, font=title)
-    draw.text((60, 270), "Fast reflex arcade fun", fill=MUTED, font=subtitle)
-    for i, color in enumerate(COLORS[:4]):
-        draw_circle(draw, 760 + i * 55, 250, 42, color)
+    title = load_font(84, True)
+    subtitle = load_font(34)
+    tagline = load_font(26)
+
+    draw.text((72, 148), "Color Tap", fill=WHITE, font=title)
+    draw.text((72, 248), "Fast reflex arcade fun", fill=MUTED, font=subtitle)
+    draw.text((72, 310), "Tap the circles. Beat your best score.", fill=GOLD, font=tagline)
+
+    draw.rounded_rectangle((72, 368, 290, 428), radius=22, fill=ACCENT)
+    draw.text((181, 398), "Play Free", fill=WHITE, font=tagline, anchor="mm")
+
+    circle_specs = [
+        (720, 170, 58, COLORS[0]),
+        (860, 120, 44, COLORS[2]),
+        (930, 250, 52, COLORS[3]),
+        (790, 310, 38, COLORS[4]),
+        (880, 360, 46, COLORS[1]),
+        (650, 280, 34, COLORS[0]),
+    ]
+    for x, y, r, color in circle_specs:
+        draw_circle(draw, x, y, r, color)
+        draw_circle(draw, x, y, max(r // 3, 10), "#FFFFFF")
+
     return img
 
 
