@@ -117,7 +117,7 @@ app/src/main/java/com/colortapz/game/
 - Kotlin
 - Jetpack Compose + Material 3
 - AndroidX Lifecycle ViewModel
-- Min SDK 26 / Target SDK 34
+- Min SDK 26 / Target SDK 36
 
 ## License
 

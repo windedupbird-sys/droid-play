@@ -14,7 +14,7 @@ Everything you need to submit **Color Tap v1.1.0** to Google Play.
 | Listing copy | `store-listing/` folder |
 | High score persistence | Done |
 | AdMob integration | Done (add your real IDs before production) |
-| Target SDK 35 | Done |
+| Target SDK 36 | Done |
 
 ## Before you submit (required)
 
