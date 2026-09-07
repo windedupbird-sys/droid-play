@@ -1,4 +1,4 @@
-package com.colortap.game
+package com.colortapz.game
 
 import android.app.Application
 import android.os.Bundle

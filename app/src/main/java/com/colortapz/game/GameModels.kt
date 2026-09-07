@@ -1,4 +1,4 @@
-package com.colortap.game
+package com.colortapz.game
 
 import androidx.compose.ui.graphics.Color
 import java.util.UUID

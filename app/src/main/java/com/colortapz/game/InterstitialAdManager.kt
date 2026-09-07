@@ -1,4 +1,4 @@
-package com.colortap.game
+package com.colortapz.game
 
 import android.app.Activity
 import android.content.Context
@@ -114,7 +114,7 @@ class InterstitialAdManager(
     }
 
     companion object {
-        private const val PREFS_NAME = "colortap_ads"
+        private const val PREFS_NAME = "colortapz_ads"
         private const val KEY_COMPLETED_GAMES = "completed_games"
         private const val KEY_AD_PENDING = "ad_pending"
         private const val GAMES_PER_AD = 6

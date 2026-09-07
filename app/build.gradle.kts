@@ -28,15 +28,15 @@ fun admobId(key: String, envName: String, testId: String): String {
 }
 
 android {
-    namespace = "com.colortap.game"
+    namespace = "com.colortapz.game"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.colortap.game"
+        applicationId = "com.colortapz.game"
         minSdk = 26
         targetSdk = 35
-        versionCode = 4
-        versionName = "1.1.0"
+        versionCode = 5
+        versionName = "1.1.1"
 
         resValue(
             "string",

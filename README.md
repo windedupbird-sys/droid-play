@@ -105,7 +105,7 @@ GitHub Actions builds the APK and publishes it on the **Releases** page. Open th
 ## Project Structure
 
 ```
-app/src/main/java/com/colortap/game/
+app/src/main/java/com/colortapz/game/
 ├── MainActivity.kt    # App entry point
 ├── GameScreen.kt      # Compose UI (menu, HUD, targets, game over)
 ├── GameViewModel.kt   # Game logic and state

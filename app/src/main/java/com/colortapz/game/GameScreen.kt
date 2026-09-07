@@ -1,4 +1,4 @@
-package com.colortap.game
+package com.colortapz.game
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween

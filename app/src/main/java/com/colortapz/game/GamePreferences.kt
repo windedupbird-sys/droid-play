@@ -1,4 +1,4 @@
-package com.colortap.game
+package com.colortapz.game
 
 import android.content.Context
 
@@ -14,7 +14,7 @@ class GamePreferences(context: Context) {
     }
 
     companion object {
-        private const val PREFS_NAME = "colortap_game"
+        private const val PREFS_NAME = "colortapz_game"
         private const val KEY_HIGH_SCORE = "high_score"
     }
 }
