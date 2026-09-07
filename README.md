@@ -47,9 +47,28 @@ Install on a connected device:
 adb install app/build/outputs/apk/debug/app-debug.apk
 ```
 
+## Google Play Store
+
+See **[PLAY_STORE.md](PLAY_STORE.md)** for the full release checklist.
+
+Quick start:
+
+```bash
+./scripts/generate-keystore.sh
+./gradlew bundleRelease
+```
+
+Upload `app/build/outputs/bundle/release/app-release.aab` to Play Console.
+
+Privacy policy URL (after GitHub Pages deploy):
+
+```
+https://windedupbird-sys.github.io/droid-play/privacy-policy.html
+```
+
 ## Download APK on your phone (GitHub Releases)
 
-This project includes a GitHub Actions workflow that builds the APK automatically.
+This project includes a GitHub Actions workflow that builds release artifacts automatically.
 
 ### One-time setup
 
@@ -69,9 +88,9 @@ GitHub Actions builds the APK and publishes it on the **Releases** page. Open th
 
 **Option B — Manual build (no tag)**
 
-1. On GitHub, go to **Actions → Build and Release APK → Run workflow**.
+1. On GitHub, go to **Actions → Build and Release → Run workflow**.
 2. Optionally check **Create a GitHub Release**.
-3. When the run finishes, download `ColorTap.apk` from the **Artifacts** section (or from Releases if you checked that box).
+3. When the run finishes, download `ColorTap.apk` or `ColorTap.aab` from **Artifacts** (or from Releases if you checked that box).
 
 ### Install on Android
 

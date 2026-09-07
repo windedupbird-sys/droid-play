@@ -25,3 +25,5 @@ android-sdk/
 # Keystore files
 *.jks
 *.keystore
+keystore.properties
+release-keystore/
