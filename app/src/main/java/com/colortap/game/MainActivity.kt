@@ -11,16 +11,22 @@ import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 class MainActivity : ComponentActivity() {
+    private lateinit var adManager: InterstitialAdManager
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        adManager = InterstitialAdManager(this)
         setContent {
             val viewModel: GameViewModel = viewModel()
             Surface(
                 modifier = Modifier.fillMaxSize(),
                 color = Color(0xFF1A1A2E)
             ) {
-                GameScreen(viewModel = viewModel)
+                GameScreen(
+                    viewModel = viewModel,
+                    adManager = adManager
+                )
             }
         }
     }

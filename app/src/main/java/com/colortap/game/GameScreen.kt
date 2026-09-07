@@ -39,7 +39,10 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 
 @Composable
-fun GameScreen(viewModel: GameViewModel) {
+fun GameScreen(
+    viewModel: GameViewModel,
+    adManager: InterstitialAdManager
+) {
     var uiState by remember { mutableStateOf(viewModel.state) }
 
     LaunchedEffect(viewModel) {
@@ -47,6 +50,16 @@ fun GameScreen(viewModel: GameViewModel) {
             uiState = viewModel.state
             delay(16L)
         }
+    }
+
+    LaunchedEffect(uiState.phase) {
+        if (uiState.phase == GamePhase.GAME_OVER) {
+            adManager.recordGameCompleted()
+        }
+    }
+
+    val startGame = {
+        adManager.requestContinue { viewModel.startGame() }
     }
 
     Box(
@@ -61,7 +74,7 @@ fun GameScreen(viewModel: GameViewModel) {
         when (uiState.phase) {
             GamePhase.MENU -> MenuOverlay(
                 highScore = uiState.highScore,
-                onPlay = { viewModel.startGame() }
+                onPlay = startGame
             )
             GamePhase.PLAYING -> {
                 Hud(score = uiState.score, lives = uiState.lives)
@@ -73,7 +86,7 @@ fun GameScreen(viewModel: GameViewModel) {
             GamePhase.GAME_OVER -> GameOverOverlay(
                 score = uiState.score,
                 highScore = uiState.highScore,
-                onPlayAgain = { viewModel.startGame() }
+                onPlayAgain = startGame
             )
         }
     }

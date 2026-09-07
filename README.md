@@ -51,6 +51,10 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 
 See **[PLAY_STORE.md](PLAY_STORE.md)** for the full release checklist.
 
+### AdMob setup
+
+The app shows an interstitial video ad every 6 completed games. Before publishing, replace the test AdMob IDs in `app/src/main/res/values/strings.xml` with your real IDs from the [AdMob console](https://admob.google.com/).
+
 Quick start:
 
 ```bash

@@ -102,15 +102,16 @@ Suggested answers for Color Tap:
 
 ## 9. Data safety form
 
-Because Color Tap collects no data:
+Because Color Tap collects no data directly:
 
-- **Does your app collect or share user data?** No
-- No data types to declare
-- No security practices beyond standard Android install
+- **Does your app collect or share user data?** No (for your own app code)
+- Declare **Google AdMob** as a third-party that may collect data for advertising
+- Typical AdMob declarations: Device IDs, ad interactions, IP address (for ad delivery)
+- **Ads:** Yes — the app contains ads
 
 ## 10. App content declarations
 
-- **Ads:** No
+- **Ads:** Yes
 - **In-app purchases:** No
 - **Target audience:** All ages (or 13+ if you prefer a narrower audience)
 - **News app / COVID / government:** No
