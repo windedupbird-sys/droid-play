@@ -12,9 +12,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
@@ -65,6 +67,7 @@ fun GameScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .safeDrawingPadding()
             .background(
                 Brush.verticalGradient(
                     colors = listOf(Color(0xFF1A1A2E), Color(0xFF16213E))
@@ -77,11 +80,11 @@ fun GameScreen(
                 onPlay = startGame
             )
             GamePhase.PLAYING -> {
-                Hud(score = uiState.score, lives = uiState.lives)
                 TargetField(
                     targets = uiState.targets,
                     onTargetTap = viewModel::tapTarget
                 )
+                Hud(score = uiState.score, lives = uiState.lives)
             }
             GamePhase.GAME_OVER -> GameOverOverlay(
                 score = uiState.score,
@@ -96,10 +99,10 @@ fun GameScreen(
 private fun Hud(score: Int, lives: Int) {
     Row(
         modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 24.dp, vertical = 48.dp),
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.Top
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = "Score: $score",

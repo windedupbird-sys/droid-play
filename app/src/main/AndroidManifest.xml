@@ -23,7 +23,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:screenOrientation="portrait"
+            android:resizeableActivity="true"
             android:theme="@style/Theme.ColorTap">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

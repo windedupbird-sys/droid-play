@@ -35,8 +35,8 @@ android {
         applicationId = "com.colortapz.game"
         minSdk = 26
         targetSdk = 36
-        versionCode = 6
-        versionName = "1.1.2"
+        versionCode = 7
+        versionName = "1.1.3"
 
         resValue(
             "string",
@@ -107,7 +107,8 @@ dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2024.02.00")
     implementation(composeBom)
     implementation("androidx.core:core-ktx:1.12.0")
-    implementation("androidx.activity:activity-compose:1.8.2")
+    implementation("androidx.activity:activity-compose:1.9.3")
+    implementation("androidx.fragment:fragment:1.8.5")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
