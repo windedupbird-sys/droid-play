@@ -9,7 +9,16 @@ Tap colorful circles before they fade away. Faster taps earn more points. Miss t
 - Colored targets appear at random positions on screen
 - Tap a target before its timer runs out
 - Quick taps score **3 points**, medium taps **2**, slow taps **1**
-- You have **3 lives** — each missed target costs one
+- Build consecutive tap **Combos** (up to 4x score multiplier!)
+- Special targets:
+  - **★ Standard**: Fast reflex scoring
+  - **✦ Golden**: High value bonus points
+  - **♥ Heart**: Restores 1 lost life (up to 5 max)
+  - **❄ Freeze**: Temporarily slows down time
+  - **✖ Bomb**: Hazard! Tap it and you lose a life (safe to let expire)
+- You start with **3 lives** — missed beneficial targets cost one
+- Pause anytime, resume or restart
+- End-of-game summary with full match stats (total taps, perfect taps, max combo, missed targets)
 - Difficulty increases as your score goes up (faster spawns, shorter timers)
 
 ## Requirements
