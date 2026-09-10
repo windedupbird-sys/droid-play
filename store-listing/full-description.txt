@@ -4,6 +4,9 @@ Colored circles appear on screen and begin fading away. Tap them before they dis
 
 Features:
 • One-touch gameplay anyone can learn in seconds
+• Multiplier combos for consecutive successful taps
+• Exciting target types: Golden bonus, Heart heals, Freeze slowdowns, and Bomb hazards
+• Pause & resume support with detailed post-game statistics
 • Difficulty increases as your score grows
 • Best score saved on your device
 • Works offline — no account required
