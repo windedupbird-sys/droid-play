@@ -4,22 +4,31 @@ A simple Android arcade game built with **Kotlin** and **Jetpack Compose**.
 
 Tap colorful circles before they fade away. Faster taps earn more points. Miss three circles and it's game over.
 
-## Gameplay
+## Gameplay & Features
 
-- Colored targets appear at random positions on screen
-- Tap a target before its timer runs out
-- Quick taps score **3 points**, medium taps **2**, slow taps **1**
-- Build consecutive tap **Combos** (up to 4x score multiplier!)
-- Special targets:
-  - **★ Standard**: Fast reflex scoring
-  - **✦ Golden**: High value bonus points
-  - **♥ Heart**: Restores 1 lost life (up to 5 max)
-  - **❄ Freeze**: Temporarily slows down time
-  - **✖ Bomb**: Hazard! Tap it and you lose a life (safe to let expire)
-- You start with **3 lives** — missed beneficial targets cost one
-- Pause anytime, resume or restart
-- End-of-game summary with full match stats (total taps, perfect taps, max combo, missed targets)
-- Difficulty increases as your score goes up (faster spawns, shorter timers)
+- **3 Game Modes**:
+  - **Classic**: Endless survival with 3 lives; targets spawn faster as your score climbs.
+  - **Time Attack**: 60-second frenzy with infinite lives. Perfect taps grant +2 seconds; bomb hits penalize 3 seconds.
+  - **Zen**: Relaxing endless flow with zero bombs, zero lives, and zero stress.
+- **Dynamic Targets & Mechanics**:
+  - **★ Standard**: Fast reflex scoring (up to 3 points for quick taps).
+  - **✦ Golden**: High-value bonus points.
+  - **♥ Heart**: Restores 1 life (up to 5 max in Classic mode).
+  - **❄ Freeze**: Temporarily slows down time, target expiration, and spawn frequency.
+  - **✖ Bomb**: Dangerous hazard circle (safe to let expire; tap penalty depends on mode).
+  - **🛡 Shielded / Armored Targets**: Multi-hit targets that crack on the first strike and burst on the second.
+  - **Drifting Targets**: Targets that float and bounce smoothly across screen boundaries.
+- **Combos & 🔥 Fever Mode**:
+  - Consecutive taps build multipliers up to 4x (5+, 10+, 20+ combos).
+  - Hitting a 15x combo activates **Fever Mode** for 5 seconds (2x point multiplier, golden particle aura).
+- **Procedural Audio & Haptic Feedback**:
+  - 100% in-code synthesized audio waveforms (no external assets needed) with pitch-shifted chimes, freeze shimmers, bomb booms, and button clicks.
+  - Granular Android haptic feedback (ticks, crisp clicks, heavy impacts, and double pulses).
+  - Instant toggle for audio and haptics in the HUD and main menu.
+- **Progression, Themes & Leaderboard**:
+  - **Unlockable Visual Themes**: Classic Neon, Cyberpunk, Pastel Dream, Sunset Glow, and Retro Arcade.
+  - **Badges & Achievements**: 7 in-game achievement badges (Combo Master, Centurion, Freeze Master, Zen Seeker, Untouchable, Lightning Reflex, Armor Piercer).
+  - **Local High Scores**: Top 5 local leaderboard per game mode with score, combo, and tap precision stats.
 
 ## Requirements
 
