@@ -1,19 +1,20 @@
 # Color Tap — Play Store launch guide
 
-Everything you need to submit **Color Tap v1.1.2** to Google Play.
+Everything you need to submit **Color Tap v1.2.0** to Google Play.
 
 ## Status
 
 | Item | Status |
 |------|--------|
-| Signed release AAB build | Ready |
+| Signed release AAB build | Ready (`app/build/outputs/bundle/release/app-release.aab`) |
+| Version Code & Name | `versionCode 8`, `versionName 1.2.0` |
 | Privacy policy URL | https://windedupbird-sys.github.io/droid-play/privacy-policy.html |
 | Store icon (512×512) | `store-assets/play-store-icon-512.png` |
-| Feature graphic | `store-assets/feature-graphic-1024x500.png` |
-| Screenshots (3) | `store-assets/screenshot-*.png` |
+| Feature graphic (1024×500) | `store-assets/feature-graphic-1024x500.png` |
+| Screenshots (3) | `store-assets/screenshot-01-menu.png`, `screenshot-02-gameplay.png`, `screenshot-03-game-over.png` |
 | Listing copy | `store-listing/` folder |
-| High score persistence | Done |
-| AdMob integration | Done (add your real IDs before production) |
+| Keystore & Signing Config | Generated (`colortap-release.keystore`, alias `colortap`) |
+| AdMob integration | Ready (test IDs built-in; add your production IDs in `admob.properties`) |
 | Target SDK 36 | Done |
 
 ## Before you submit (required)

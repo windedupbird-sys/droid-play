@@ -18,6 +18,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         adManager = InterstitialAdManager(this)
+        val storage = GamePreferences(applicationContext)
         setContent {
             val viewModel: GameViewModel = viewModel(factory = GameViewModel.factory(application))
             Surface(
@@ -26,7 +27,8 @@ class MainActivity : ComponentActivity() {
             ) {
                 GameScreen(
                     viewModel = viewModel,
-                    adManager = adManager
+                    adManager = adManager,
+                    storage = storage
                 )
             }
         }

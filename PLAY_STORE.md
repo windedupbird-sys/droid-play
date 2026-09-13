@@ -52,11 +52,11 @@ app/build/outputs/bundle/release/app-release.aab
 Or create a GitHub release tag to build it in CI:
 
 ```bash
-git tag v1.0.1
-git push github v1.0.1
+git tag v1.1.3
+git push origin v1.1.3
 ```
 
-The workflow uploads `ColorTap.aab` to GitHub Releases.
+The workflow uploads `ColorTap.aab` and `ColorTap.apk` to GitHub Releases.
 
 ## 5. Enable GitHub Pages for the privacy policy
 
