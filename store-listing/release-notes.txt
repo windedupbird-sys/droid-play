@@ -1,4 +1,4 @@
-What's new in Color Tap v1.1.3:
+What's new in Color Tap v1.2.0:
 • 3 Game Modes: Classic Survival, 60s Time Attack, and Relaxing Zen Mode
 • Procedural synthesizer sound effects & tactile Android haptic feedback
 • Multiplier combos and explosive Fever Mode

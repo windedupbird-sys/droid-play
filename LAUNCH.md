@@ -1,12 +1,13 @@
 # Color Tap — Play Store launch guide
 
-Everything you need to submit **Color Tap v1.1.3** to Google Play.
+Everything you need to submit **Color Tap v1.2.0** to Google Play.
 
 ## Status
 
 | Item | Status |
 |------|--------|
 | Signed release AAB build | Ready (`app/build/outputs/bundle/release/app-release.aab`) |
+| Version Code & Name | `versionCode 8`, `versionName 1.2.0` |
 | Privacy policy URL | https://windedupbird-sys.github.io/droid-play/privacy-policy.html |
 | Store icon (512×512) | `store-assets/play-store-icon-512.png` |
 | Feature graphic (1024×500) | `store-assets/feature-graphic-1024x500.png` |
