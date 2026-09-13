@@ -29,7 +29,8 @@ However, you must disclose that **third-party advertising (Google AdMob)** may c
 
 ## Data stored locally on device
 
-- **High score** — stored in app preferences, not transmitted
+- **High scores and local leaderboards** — stored in app preferences on device, not transmitted
+- **Unlocked achievements and selected themes** — stored locally on device
 - **Games completed counter** — used for ad frequency, stored locally
 
 ## Third-party SDK: Google AdMob

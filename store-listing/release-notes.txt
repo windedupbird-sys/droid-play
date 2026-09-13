@@ -1,5 +1,9 @@
-Initial Play Store launch:
-• Tap-to-score arcade gameplay
-• Saved high scores
-• Occasional AdMob video ads every 6 games
-• Offline play supported
+What's new in Color Tap v1.1.3:
+• 3 Game Modes: Classic Survival, 60s Time Attack, and Relaxing Zen Mode
+• Procedural synthesizer sound effects & tactile Android haptic feedback
+• Multiplier combos and explosive Fever Mode
+• Special target varieties: Golden bonuses, Heart heals, Freeze slowdowns, moving targets, shielded circles, and Bomb hazards
+• Unlockable visual themes: Classic Neon, Cyberpunk, Pastel Dream, Sunset Glow, and Retro Arcade
+• In-game Achievements system & Local Top 5 Leaderboards per mode
+• Performance and responsiveness optimizations
+• Offline play fully supported
