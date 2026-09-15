@@ -164,8 +164,19 @@ class GameViewModelTest {
     @Test
     fun tapTarget_quickTap_scoresThreePointsPlusCombo() {
         viewModel.startGame()
-        val target = viewModel.state.targets.first()
-        val spawnTime = target.spawnedAtMs
+        // startGame() spawns a target of a random type; replace it with a known
+        // STANDARD target so the quick-tap scoring assertions are deterministic.
+        val spawnTime = 1_000L
+        val target = Target(
+            id = "standard-target",
+            xFraction = 0.5f,
+            yFraction = 0.5f,
+            color = Color.Red,
+            maxLifetimeMs = 2000L,
+            spawnedAtMs = spawnTime,
+            type = TargetType.STANDARD
+        )
+        viewModel.state = viewModel.state.copy(targets = listOf(target))
 
         viewModel.tapTarget(target.id, now = spawnTime + 50L)
 
