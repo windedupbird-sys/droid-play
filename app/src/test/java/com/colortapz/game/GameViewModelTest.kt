@@ -181,10 +181,21 @@ class GameViewModelTest {
     @Test
     fun tapTarget_quickTap_scoresThreePointsPlusCombo() {
         viewModel.startGame()
-        val target = state.targets.first()
-        val spawnTime = target.spawnedAtMs
+        // Stage the target rather than using the randomly spawned one: a GOLDEN
+        // or FREEZE roll scores differently and made this test flaky.
+        val spawnTime = 1_000L
+        val target = Target(
+            id = "quick-tap",
+            xFraction = 0.5f,
+            yFraction = 0.5f,
+            color = Color.Red,
+            maxLifetimeMs = 2000L,
+            spawnedAtMs = spawnTime,
+            type = TargetType.STANDARD
+        )
+        viewModel.setStateForTest(state.copy(targets = listOf(target)))
 
-        viewModel.tapTarget(target.id, now = spawnTime + 50L)
+        viewModel.tapTarget("quick-tap", now = spawnTime + 50L)
 
         assertEquals(3, state.score)
         assertEquals(1, state.combo)
