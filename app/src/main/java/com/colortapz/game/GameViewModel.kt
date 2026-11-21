@@ -15,6 +15,12 @@ import com.colortapz.game.audio.SoundManager
 import com.colortapz.game.audio.SynthesizedSoundManager
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.math.cos
@@ -22,19 +28,43 @@ import kotlin.math.sin
 import kotlin.random.Random
 
 class GameViewModel(
-    private val preferences: GameScoreStorage,
+    internal val storage: GameScoreStorage,
     private val soundManager: SoundManager? = null,
-    private val hapticsManager: HapticsManager? = null
+    private val hapticsManager: HapticsManager? = null,
+    /**
+     * Monotonic millisecond clock.
+     *
+     * Deliberately not System.currentTimeMillis(): a wall-clock correction
+     * (NTP sync, manual change, timezone tooling) produces negative or enormous
+     * deltas, which made targets immortal or instantly expired and corrupted the
+     * Time Attack countdown. nanoTime is monotonic and, unlike elapsedRealtime,
+     * does not advance while the device sleeps - exactly what a paused game wants.
+     * Injected so JVM tests can drive time explicitly.
+     */
+    private val clock: () -> Long = { System.nanoTime() / 1_000_000L }
 ) : ViewModel() {
 
-    val isSoundEnabled = soundManager?.isSoundEnabled
-    val isHapticsEnabled = hapticsManager?.isHapticsEnabled
-
-    var state = GameState(
-        highScore = preferences.getHighScore(GameMode.CLASSIC),
-        currentThemeId = preferences.getSelectedTheme()
+    private val _state = MutableStateFlow(
+        GameState(
+            highScore = storage.getHighScore(GameMode.CLASSIC),
+            currentThemeId = storage.getSelectedTheme()
+        )
     )
-        internal set
+
+    /** Observable game state. The UI collects this; there is no polling loop. */
+    val state: StateFlow<GameState> = _state.asStateFlow()
+
+    /**
+     * Emitted exactly once per finished run. The UI uses it to advance the
+     * interstitial cadence. Deliberately a SharedFlow rather than a
+     * LaunchedEffect keyed on the phase: that re-fired on every Activity
+     * recreation (rotation, resize) and double-counted completed games.
+     */
+    private val _gameCompleted = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val gameCompleted: SharedFlow<Unit> = _gameCompleted.asSharedFlow()
+
+    val isSoundEnabled: StateFlow<Boolean>? = soundManager?.isSoundEnabled
+    val isHapticsEnabled: StateFlow<Boolean>? = hapticsManager?.isHapticsEnabled
 
     private var loopJob: Job? = null
 
@@ -43,11 +73,20 @@ class GameViewModel(
     private val minY = 0.22f
     private val maxY = 0.72f
 
+    /** Current monotonic time, shared with the UI so every timestamp uses one clock domain. */
+    fun now(): Long = clock()
+
+    private var current: GameState
+        get() = _state.value
+        set(value) {
+            _state.value = value
+        }
+
     fun setGameMode(mode: GameMode) {
-        if (state.phase == GamePhase.MENU) {
-            state = state.copy(
+        if (current.phase == GamePhase.MENU) {
+            current = current.copy(
                 gameMode = mode,
-                highScore = preferences.getHighScore(mode)
+                highScore = storage.getHighScore(mode)
             )
             soundManager?.play(SoundEffect.BUTTON_CLICK)
             hapticsManager?.perform(HapticEffect.LIGHT_TICK)
@@ -55,9 +94,9 @@ class GameViewModel(
     }
 
     fun setTheme(themeId: ThemeId) {
-        if (preferences.isThemeUnlocked(themeId)) {
-            preferences.saveSelectedTheme(themeId)
-            state = state.copy(currentThemeId = themeId)
+        if (storage.isThemeUnlocked(themeId)) {
+            storage.saveSelectedTheme(themeId)
+            current = current.copy(currentThemeId = themeId)
             soundManager?.play(SoundEffect.BUTTON_CLICK)
             hapticsManager?.perform(HapticEffect.CRISP_CLICK)
         }
@@ -77,60 +116,75 @@ class GameViewModel(
         }
     }
 
-    fun startGame(mode: GameMode = state.gameMode) {
+    fun startGame(mode: GameMode = current.gameMode) {
         loopJob?.cancel()
-        val currentBest = preferences.getHighScore(mode)
-        state = GameState(
+        val currentBest = storage.getHighScore(mode)
+        val startedAt = clock()
+        current = GameState(
             phase = GamePhase.PLAYING,
             gameMode = mode,
-            currentThemeId = preferences.getSelectedTheme(),
+            currentThemeId = storage.getSelectedTheme(),
             highScore = currentBest,
             lives = mode.initialLives,
             timeRemainingMs = mode.initialDurationMs,
-            lastSpawnAtMs = System.currentTimeMillis()
+            lastSpawnAtMs = startedAt
         )
-        spawnTarget(System.currentTimeMillis())
+        spawnTarget(startedAt)
         startGameLoop()
         soundManager?.play(SoundEffect.BUTTON_CLICK)
         hapticsManager?.perform(HapticEffect.CRISP_CLICK)
     }
 
     fun pauseGame() {
-        if (state.phase == GamePhase.PLAYING) {
-            state = state.copy(phase = GamePhase.PAUSED)
+        if (current.phase == GamePhase.PLAYING) {
+            current = current.copy(phase = GamePhase.PAUSED)
             soundManager?.play(SoundEffect.BUTTON_CLICK)
             hapticsManager?.perform(HapticEffect.LIGHT_TICK)
         }
     }
 
+    /**
+     * Called when the Activity stops (home button, app switch, screen off,
+     * another app covering the game). Without this the loop and the clock kept
+     * running behind the system UI and the player came back to a dead run.
+     * Silent on purpose - backgrounding should not make a sound or buzz.
+     */
+    fun onAppBackgrounded() {
+        persistHighScore()
+        if (current.phase == GamePhase.PLAYING) {
+            current = current.copy(phase = GamePhase.PAUSED)
+        }
+    }
+
     fun resumeGame() {
-        if (state.phase == GamePhase.PAUSED) {
-            state = state.copy(phase = GamePhase.PLAYING)
+        if (current.phase == GamePhase.PAUSED) {
+            current = current.copy(phase = GamePhase.PLAYING)
             soundManager?.play(SoundEffect.BUTTON_CLICK)
             hapticsManager?.perform(HapticEffect.LIGHT_TICK)
         }
     }
 
     fun restartGame() {
-        startGame(state.gameMode)
+        startGame(current.gameMode)
     }
 
     fun returnToMenu() {
         loopJob?.cancel()
-        state = state.copy(
+        persistHighScore()
+        current = current.copy(
             phase = GamePhase.MENU,
             targets = emptyList(),
             particles = emptyList(),
             popups = emptyList(),
-            highScore = preferences.getHighScore(state.gameMode)
+            highScore = storage.getHighScore(current.gameMode)
         )
         soundManager?.play(SoundEffect.BUTTON_CLICK)
         hapticsManager?.perform(HapticEffect.LIGHT_TICK)
     }
 
-    fun tapTarget(targetId: String, now: Long = System.currentTimeMillis()) {
-        if (state.phase != GamePhase.PLAYING) return
-        val target = state.targets.find { it.id == targetId } ?: return
+    fun tapTarget(targetId: String, now: Long = clock()) {
+        if (current.phase != GamePhase.PLAYING) return
+        val target = current.targets.find { it.id == targetId } ?: return
 
         if (target.type == TargetType.BOMB) {
             handleBombTapped(target, now)
@@ -149,7 +203,7 @@ class GameViewModel(
         val updated = target.copy(currentHits = target.currentHits + 1)
         val crackParticles = createBurstParticles(target.xFraction, target.yFraction, Color(0xFFB0BEC5), count = 8, now)
         val popup = ScorePopup(
-            text = "CRACK!",
+            textRes = R.string.popup_crack,
             xFraction = target.xFraction,
             yFraction = target.yFraction,
             color = Color(0xFFB0BEC5),
@@ -159,19 +213,19 @@ class GameViewModel(
         soundManager?.play(SoundEffect.SHIELD_CRACK)
         hapticsManager?.perform(HapticEffect.CRISP_CLICK)
 
-        val newCombo = state.combo + 1
+        val newCombo = current.combo + 1
         val newMultiplier = calculateMultiplier(newCombo)
         checkFeverTrigger(newCombo, now)
 
-        state = state.copy(
-            targets = state.targets.map { if (it.id == target.id) updated else it },
-            particles = state.particles + crackParticles,
-            popups = state.popups + popup,
+        current = current.copy(
+            targets = current.targets.map { if (it.id == target.id) updated else it },
+            particles = current.particles + crackParticles,
+            popups = current.popups + popup,
             combo = newCombo,
             multiplier = newMultiplier,
-            stats = state.stats.copy(
-                totalTaps = state.stats.totalTaps + 1,
-                maxCombo = maxOf(state.stats.maxCombo, newCombo)
+            stats = current.stats.copy(
+                totalTaps = current.stats.totalTaps + 1,
+                maxCombo = maxOf(current.stats.maxCombo, newCombo)
             )
         )
     }
@@ -182,60 +236,60 @@ class GameViewModel(
 
         val burstParticles = createBurstParticles(target.xFraction, target.yFraction, Color(0xFFFF3366), count = 14, now)
 
-        if (state.gameMode == GameMode.TIME_ATTACK) {
-            val newTime = (state.timeRemainingMs - 3000L).coerceAtLeast(0L)
+        if (current.gameMode == GameMode.TIME_ATTACK) {
+            val newTime = (current.timeRemainingMs - 3000L).coerceAtLeast(0L)
             val bombPopup = ScorePopup(
-                text = "-3s PENALTY!",
+                textRes = R.string.popup_bomb_penalty,
                 xFraction = target.xFraction,
                 yFraction = target.yFraction,
                 color = Color(0xFFFF3366),
                 spawnedAtMs = now
             )
-            val updatedStats = state.stats.copy(totalTaps = state.stats.totalTaps + 1)
+            val updatedStats = current.stats.copy(totalTaps = current.stats.totalTaps + 1)
 
             if (newTime <= 0L) {
-                triggerGameOver(finalScore = state.score, updatedStats = updatedStats)
+                triggerGameOver(finalScore = current.score, updatedStats = updatedStats)
                 return
             }
 
-            state = state.copy(
+            current = current.copy(
                 timeRemainingMs = newTime,
                 combo = 0,
                 multiplier = 1,
-                targets = state.targets.filter { it.id != target.id },
-                particles = state.particles + burstParticles,
-                popups = state.popups + bombPopup,
+                targets = current.targets.filter { it.id != target.id },
+                particles = current.particles + burstParticles,
+                popups = current.popups + bombPopup,
                 stats = updatedStats
             )
             return
         }
 
-        val remainingLives = state.lives - 1
+        val remainingLives = current.lives - 1
         val bombPopup = ScorePopup(
-            text = "OUCH! -1 LIFE",
+            textRes = R.string.popup_bomb_life,
             xFraction = target.xFraction,
             yFraction = target.yFraction,
             color = Color(0xFFFF3366),
             spawnedAtMs = now
         )
 
-        val updatedStats = state.stats.copy(
-            totalTaps = state.stats.totalTaps + 1,
-            livesLost = state.stats.livesLost + 1
+        val updatedStats = current.stats.copy(
+            totalTaps = current.stats.totalTaps + 1,
+            livesLost = current.stats.livesLost + 1
         )
 
-        if (remainingLives <= 0 && state.gameMode.missesDeductLives) {
-            triggerGameOver(finalScore = state.score, updatedStats = updatedStats)
+        if (remainingLives <= 0 && current.gameMode.missesDeductLives) {
+            triggerGameOver(finalScore = current.score, updatedStats = updatedStats)
             return
         }
 
-        state = state.copy(
+        current = current.copy(
             lives = remainingLives,
             combo = 0,
             multiplier = 1,
-            targets = state.targets.filter { it.id != target.id },
-            particles = state.particles + burstParticles,
-            popups = state.popups + bombPopup,
+            targets = current.targets.filter { it.id != target.id },
+            particles = current.particles + burstParticles,
+            popups = current.popups + bombPopup,
             stats = updatedStats
         )
     }
@@ -254,25 +308,21 @@ class GameViewModel(
         val isShieldBreak = target.isShielded
         val shieldBonus = if (isShieldBreak) 3 else 0
         val baseEarned = (target.type.basePoints * speedBonus) + shieldBonus
-        val newCombo = state.combo + 1
+        val newCombo = current.combo + 1
         val newMultiplier = calculateMultiplier(newCombo)
-        val feverMult = if (state.isFeverActive) 2 else 1
+        val feverMult = if (current.isFeverActive) 2 else 1
         val pointsToAdd = baseEarned * newMultiplier * feverMult
-        val newScore = state.score + pointsToAdd
+        val newScore = current.score + pointsToAdd
+        val newHighScore = maxOf(current.highScore, newScore)
 
-        val newHighScore = maxOf(state.highScore, newScore)
-        if (newHighScore > state.highScore) {
-            preferences.saveHighScore(newHighScore, state.gameMode)
-        }
-
-        var newLives = state.lives
-        var freezeMs = state.freezeRemainingMs
+        var newLives = current.lives
+        var freezeMs = current.freezeRemainingMs
         var addedTimeMs = 0L
 
         when (target.type) {
             TargetType.HEART -> {
-                if (state.gameMode == GameMode.CLASSIC) {
-                    newLives = (newLives + 1).coerceAtMost(state.maxLives)
+                if (current.gameMode == GameMode.CLASSIC) {
+                    newLives = (newLives + 1).coerceAtMost(current.maxLives)
                 }
                 soundManager?.play(SoundEffect.HEART)
                 hapticsManager?.perform(HapticEffect.CRISP_CLICK)
@@ -297,12 +347,12 @@ class GameViewModel(
             }
         }
 
-        if (state.gameMode == GameMode.TIME_ATTACK && isPerfect) {
+        if (current.gameMode == GameMode.TIME_ATTACK && isPerfect) {
             addedTimeMs = 2000L
         }
 
         val burstColor = when {
-            state.isFeverActive -> Color(0xFFFFD700)
+            current.isFeverActive -> Color(0xFFFFD700)
             target.type == TargetType.GOLDEN -> Color(0xFFFFD700)
             target.type == TargetType.HEART -> Color(0xFFFF4D6D)
             target.type == TargetType.FREEZE -> Color(0xFF64DFDF)
@@ -314,9 +364,9 @@ class GameViewModel(
         val popupLabel = buildString {
             append("+$pointsToAdd")
             if (newMultiplier > 1) append(" (${newMultiplier}x)")
-            if (state.isFeverActive) append(" 🔥FEVER")
-            if (target.type == TargetType.HEART && state.gameMode == GameMode.CLASSIC) append(" +♥")
-            if (target.type == TargetType.FREEZE) append(" ❄ FREEZE")
+            if (current.isFeverActive) append(" ×2")
+            if (target.type == TargetType.HEART && current.gameMode == GameMode.CLASSIC) append(" +♥")
+            if (target.type == TargetType.FREEZE) append(" ❄")
             if (addedTimeMs > 0) append(" +2s")
         }
 
@@ -331,39 +381,41 @@ class GameViewModel(
         checkFeverTrigger(newCombo, now)
 
         val newSpawnInterval = calculateSpawnInterval(newScore)
-        val maxCombo = maxOf(state.stats.maxCombo, newCombo)
-        val updatedStats = state.stats.copy(
-            totalTaps = state.stats.totalTaps + 1,
-            perfectTaps = if (isPerfect) state.stats.perfectTaps + 1 else state.stats.perfectTaps,
+        val maxCombo = maxOf(current.stats.maxCombo, newCombo)
+        val updatedStats = current.stats.copy(
+            totalTaps = current.stats.totalTaps + 1,
+            perfectTaps = if (isPerfect) current.stats.perfectTaps + 1 else current.stats.perfectTaps,
             maxCombo = maxCombo,
-            freezeTargetsTapped = if (target.type == TargetType.FREEZE) state.stats.freezeTargetsTapped + 1 else state.stats.freezeTargetsTapped,
-            shieldedTargetsBroken = if (isShieldBreak) state.stats.shieldedTargetsBroken + 1 else state.stats.shieldedTargetsBroken
+            freezeTargetsTapped = if (target.type == TargetType.FREEZE) current.stats.freezeTargetsTapped + 1 else current.stats.freezeTargetsTapped,
+            shieldedTargetsBroken = if (isShieldBreak) current.stats.shieldedTargetsBroken + 1 else current.stats.shieldedTargetsBroken
         )
 
-        state = state.copy(
+        // The high score is persisted on game over / pause / menu rather than on
+        // every tap: this used to be a SharedPreferences write per tap.
+        current = current.copy(
             score = newScore,
             highScore = newHighScore,
             lives = newLives,
-            timeRemainingMs = (state.timeRemainingMs + addedTimeMs).coerceAtMost(90_000L),
+            timeRemainingMs = (current.timeRemainingMs + addedTimeMs).coerceAtMost(90_000L),
             combo = newCombo,
             multiplier = newMultiplier,
             freezeRemainingMs = freezeMs,
-            targets = state.targets.filter { it.id != target.id },
-            particles = state.particles + burstParticles,
-            popups = state.popups + popup,
+            targets = current.targets.filter { it.id != target.id },
+            particles = current.particles + burstParticles,
+            popups = current.popups + popup,
             spawnIntervalMs = newSpawnInterval,
             stats = updatedStats
         )
     }
 
     private fun checkFeverTrigger(combo: Int, now: Long) {
-        if (combo > 0 && combo % 15 == 0 && state.feverRemainingMs <= 0L) {
+        if (combo > 0 && combo % 15 == 0 && current.feverRemainingMs <= 0L) {
             soundManager?.play(SoundEffect.FEVER_START)
             hapticsManager?.perform(HapticEffect.DOUBLE_PULSE)
-            state = state.copy(
+            current = current.copy(
                 feverRemainingMs = 5000L,
-                popups = state.popups + ScorePopup(
-                    text = "🔥 FEVER MODE! 2X POINTS 🔥",
+                popups = current.popups + ScorePopup(
+                    textRes = R.string.popup_fever,
                     xFraction = 0.5f,
                     yFraction = 0.35f,
                     color = Color(0xFFFFD700),
@@ -389,13 +441,13 @@ class GameViewModel(
 
     private fun startGameLoop() {
         loopJob = viewModelScope.launch {
-            var lastTick = System.currentTimeMillis()
-            while (isActive && (state.phase == GamePhase.PLAYING || state.phase == GamePhase.PAUSED)) {
-                val now = System.currentTimeMillis()
-                val delta = now - lastTick
+            var lastTick = clock()
+            while (isActive && (current.phase == GamePhase.PLAYING || current.phase == GamePhase.PAUSED)) {
+                val now = clock()
+                val delta = (now - lastTick).coerceAtLeast(0L)
                 lastTick = now
 
-                if (state.phase == GamePhase.PLAYING) {
+                if (current.phase == GamePhase.PLAYING) {
                     gameTick(now, delta)
                 }
                 delay(50L)
@@ -403,23 +455,28 @@ class GameViewModel(
         }
     }
 
+    /** Test seam: lets a test stage an exact board instead of spawning randomly. */
+    internal fun setStateForTest(newState: GameState) {
+        current = newState
+    }
+
     internal fun gameTick(now: Long, deltaMs: Long) {
-        val updatedFreeze = (state.freezeRemainingMs - deltaMs).coerceAtLeast(0L)
-        val updatedFever = (state.feverRemainingMs - deltaMs).coerceAtLeast(0L)
+        val updatedFreeze = (current.freezeRemainingMs - deltaMs).coerceAtLeast(0L)
+        val updatedFever = (current.feverRemainingMs - deltaMs).coerceAtLeast(0L)
         val isFrozen = updatedFreeze > 0L
 
         // Time Attack countdown
-        var remainingTime = state.timeRemainingMs
-        if (state.gameMode.hasTimeLimit) {
+        var remainingTime = current.timeRemainingMs
+        if (current.gameMode.hasTimeLimit) {
             remainingTime = (remainingTime - deltaMs).coerceAtLeast(0L)
             if (remainingTime <= 0L) {
-                triggerGameOver(finalScore = state.score, updatedStats = state.stats)
+                triggerGameOver(finalScore = current.score, updatedStats = current.stats)
                 return
             }
         }
 
         // Update positions of moving targets
-        val movedTargets = updateTargetPositions(state.targets, deltaMs)
+        val movedTargets = updateTargetPositions(current.targets, deltaMs)
 
         // Partition expired targets
         val (expired, activeTargets) = movedTargets.partition { target ->
@@ -431,32 +488,32 @@ class GameViewModel(
             effectiveElapsed >= target.maxLifetimeMs
         }
 
-        val activeParticles = state.particles.filter { now - it.spawnedAtMs < it.lifetimeMs }
-        val activePopups = state.popups.filter { now - it.spawnedAtMs < it.lifetimeMs }
+        val activeParticles = current.particles.filter { now - it.spawnedAtMs < it.lifetimeMs }
+        val activePopups = current.popups.filter { now - it.spawnedAtMs < it.lifetimeMs }
 
         val missedBeneficial = expired.count { !it.type.isHazard }
-        val remainingLives = if (state.gameMode.missesDeductLives) {
-            state.lives - missedBeneficial
+        val remainingLives = if (current.gameMode.missesDeductLives) {
+            current.lives - missedBeneficial
         } else {
-            state.lives
+            current.lives
         }
 
-        val newCombo = if (missedBeneficial > 0 && state.gameMode.breaksComboOnMiss) 0 else state.combo
-        val newMultiplier = if (missedBeneficial > 0 && state.gameMode.breaksComboOnMiss) 1 else state.multiplier
-        val newStats = state.stats.copy(
-            targetsMissed = state.stats.targetsMissed + missedBeneficial,
-            livesLost = state.stats.livesLost + if (state.gameMode.missesDeductLives) missedBeneficial else 0
+        val newCombo = if (missedBeneficial > 0 && current.gameMode.breaksComboOnMiss) 0 else current.combo
+        val newMultiplier = if (missedBeneficial > 0 && current.gameMode.breaksComboOnMiss) 1 else current.multiplier
+        val newStats = current.stats.copy(
+            targetsMissed = current.stats.targetsMissed + missedBeneficial,
+            livesLost = current.stats.livesLost + if (current.gameMode.missesDeductLives) missedBeneficial else 0
         )
 
-        if (remainingLives <= 0 && state.gameMode.missesDeductLives) {
-            triggerGameOver(finalScore = state.score, updatedStats = newStats)
+        if (remainingLives <= 0 && current.gameMode.missesDeductLives) {
+            triggerGameOver(finalScore = current.score, updatedStats = newStats)
             return
         }
 
-        val missPopups = if (state.gameMode.missesDeductLives) {
+        val missPopups = if (current.gameMode.missesDeductLives) {
             expired.filter { !it.type.isHazard }.map { target ->
                 ScorePopup(
-                    text = "MISSED!",
+                    textRes = R.string.popup_missed,
                     xFraction = target.xFraction,
                     yFraction = target.yFraction,
                     color = Color(0xFFE94560),
@@ -467,7 +524,7 @@ class GameViewModel(
             emptyList()
         }
 
-        state = state.copy(
+        current = current.copy(
             lives = remainingLives,
             timeRemainingMs = remainingTime,
             combo = newCombo,
@@ -480,8 +537,8 @@ class GameViewModel(
             stats = newStats
         )
 
-        val effectiveSpawnInterval = if (isFrozen) state.spawnIntervalMs * 2 else state.spawnIntervalMs
-        if (state.targets.size < 4 && (now - state.lastSpawnAtMs) >= effectiveSpawnInterval) {
+        val effectiveSpawnInterval = if (isFrozen) current.spawnIntervalMs * 2 else current.spawnIntervalMs
+        if (current.targets.size < 4 && (now - current.lastSpawnAtMs) >= effectiveSpawnInterval) {
             spawnTarget(now)
         }
     }
@@ -521,18 +578,28 @@ class GameViewModel(
         }
     }
 
+    private fun persistHighScore() {
+        val best = maxOf(current.highScore, current.score)
+        if (best > storage.getHighScore(current.gameMode)) {
+            storage.saveHighScore(best, current.gameMode)
+            if (best != current.highScore) {
+                current = current.copy(highScore = best)
+            }
+        }
+    }
+
     private fun triggerGameOver(finalScore: Int, updatedStats: GameStats) {
         soundManager?.play(SoundEffect.GAME_OVER)
         hapticsManager?.perform(HapticEffect.DOUBLE_PULSE)
 
-        val finalHighScore = maxOf(preferences.getHighScore(state.gameMode), finalScore)
-        preferences.saveHighScore(finalHighScore, state.gameMode)
-        preferences.incrementGamesPlayed()
+        val finalHighScore = maxOf(storage.getHighScore(current.gameMode), finalScore)
+        storage.saveHighScore(finalHighScore, current.gameMode)
+        storage.incrementGamesPlayed()
 
         // Record leaderboard
-        preferences.recordScore(
+        storage.recordScore(
             LeaderboardEntry(
-                mode = state.gameMode,
+                mode = current.gameMode,
                 score = finalScore,
                 maxCombo = updatedStats.maxCombo,
                 perfectTaps = updatedStats.perfectTaps
@@ -541,9 +608,9 @@ class GameViewModel(
 
         // Evaluate achievements
         val newlyUnlocked = evaluateAchievements(finalScore, updatedStats)
-        newlyUnlocked.forEach { preferences.unlockAchievement(it) }
+        newlyUnlocked.forEach { storage.unlockAchievement(it) }
 
-        state = state.copy(
+        current = current.copy(
             phase = GamePhase.GAME_OVER,
             lives = 0,
             timeRemainingMs = 0L,
@@ -555,10 +622,11 @@ class GameViewModel(
             newlyUnlockedAchievements = newlyUnlocked
         )
         loopJob?.cancel()
+        _gameCompleted.tryEmit(Unit)
     }
 
     private fun evaluateAchievements(score: Int, stats: GameStats): List<AchievementId> {
-        val already = preferences.getUnlockedAchievements()
+        val already = storage.getUnlockedAchievements()
         val unlocked = mutableListOf<AchievementId>()
 
         fun check(id: AchievementId, condition: Boolean) {
@@ -568,7 +636,7 @@ class GameViewModel(
         check(AchievementId.COMBO_MASTER, stats.maxCombo >= 20)
         check(AchievementId.CENTURION, score >= 100)
         check(AchievementId.FREEZE_SPECIALIST, stats.freezeTargetsTapped >= 5)
-        check(AchievementId.ZEN_MASTER, state.gameMode == GameMode.ZEN && stats.totalTaps >= 50)
+        check(AchievementId.ZEN_MASTER, current.gameMode == GameMode.ZEN && stats.totalTaps >= 50)
         check(AchievementId.UNTOUCHABLE, score >= 30 && stats.livesLost == 0)
         check(AchievementId.SPEED_DEMON, stats.perfectTaps >= 10)
         check(AchievementId.SHIELD_BREAKER, stats.shieldedTargetsBroken >= 3)
@@ -576,16 +644,16 @@ class GameViewModel(
         return unlocked
     }
 
-    internal fun spawnTarget(now: Long = System.currentTimeMillis()) {
-        val theme = ThemeCatalog.themes[state.currentThemeId] ?: ThemeCatalog.themes.values.first()
+    internal fun spawnTarget(now: Long = clock()) {
+        val theme = ThemeCatalog.themes[current.currentThemeId] ?: ThemeCatalog.themes.values.first()
         val palette = theme.targetPalette
 
         val typeRoll = Random.nextFloat()
         val targetType = when {
             typeRoll < 0.08f -> TargetType.GOLDEN
-            typeRoll < 0.13f && state.gameMode == GameMode.CLASSIC -> TargetType.HEART
+            typeRoll < 0.13f && current.gameMode == GameMode.CLASSIC -> TargetType.HEART
             typeRoll < 0.19f -> TargetType.FREEZE
-            typeRoll < 0.28f && state.score >= 10 && state.gameMode.spawnsBombs -> TargetType.BOMB
+            typeRoll < 0.28f && current.score >= 10 && current.gameMode.spawnsBombs -> TargetType.BOMB
             else -> TargetType.STANDARD
         }
 
@@ -594,7 +662,7 @@ class GameViewModel(
             TargetType.BOMB -> 2600L
             TargetType.FREEZE -> 2000L
             TargetType.HEART -> 1800L
-            TargetType.STANDARD -> (2200L - state.score * 12L).coerceAtLeast(850L)
+            TargetType.STANDARD -> (2200L - current.score * 12L).coerceAtLeast(850L)
         }
 
         val color = when (targetType) {
@@ -608,8 +676,8 @@ class GameViewModel(
         // Decide behavior: drifting (moving) or shielded
         val behaviorRoll = Random.nextFloat()
         val behavior = when {
-            behaviorRoll < 0.15f && state.score >= 15 -> TargetBehavior.DRIFTING
-            behaviorRoll < 0.30f && state.score >= 20 && targetType == TargetType.STANDARD -> TargetBehavior.SHIELDED
+            behaviorRoll < 0.15f && current.score >= 15 -> TargetBehavior.DRIFTING
+            behaviorRoll < 0.30f && current.score >= 20 && targetType == TargetType.STANDARD -> TargetBehavior.SHIELDED
             else -> TargetBehavior.STATIC
         }
 
@@ -631,8 +699,8 @@ class GameViewModel(
             currentHits = 0
         )
 
-        state = state.copy(
-            targets = state.targets + target,
+        current = current.copy(
+            targets = current.targets + target,
             lastSpawnAtMs = now
         )
     }

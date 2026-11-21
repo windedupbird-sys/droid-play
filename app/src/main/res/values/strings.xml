@@ -1,4 +1,104 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Color Tap</string>
+
+    <!-- Menu -->
+    <string name="menu_title">COLOR TAP</string>
+    <string name="menu_subtitle">Fast reflexes win. Build combos for multipliers!</string>
+    <string name="menu_best">%1$s BEST: %2$d</string>
+    <string name="play_mode">Play %1$s</string>
+    <string name="nav_ranks">Ranks</string>
+    <string name="nav_badges">Badges</string>
+    <string name="nav_themes">Themes</string>
+
+    <!-- Modes -->
+    <string name="mode_classic">Classic</string>
+    <string name="mode_time_attack">Time Attack</string>
+    <string name="mode_zen">Zen</string>
+    <string name="mode_classic_desc">Survive endless waves with 3 lives. Bombs and misses cost lives.</string>
+    <string name="mode_time_attack_desc">60s frenzy! Infinite lives. Perfect taps add +2s. Bombs cost 3s.</string>
+    <string name="mode_zen_desc">Relaxing endless flow. No bombs, no lives, no stress.</string>
+
+    <!-- HUD -->
+    <string name="hud_combo">COMBO %1$d</string>
+    <string name="hud_multiplier">%1$dx</string>
+    <string name="hud_seconds">%1$ds</string>
+    <string name="hud_zen">ZEN</string>
+    <string name="hud_frozen">FROZEN %1$ds</string>
+    <string name="hud_fever">FEVER 2X %1$ds</string>
+    <string name="hud_heart_filled">Life remaining</string>
+
+    <!-- Controls -->
+    <string name="cd_sound_on">Sound on, tap to mute</string>
+    <string name="cd_sound_off">Sound off, tap to unmute</string>
+    <string name="cd_haptics_on">Vibration on, tap to disable</string>
+    <string name="cd_haptics_off">Vibration off, tap to enable</string>
+    <string name="cd_pause">Pause game</string>
+    <string name="cd_close">Close</string>
+
+    <!-- Pause -->
+    <string name="game_paused">GAME PAUSED</string>
+    <string name="action_resume">Resume</string>
+    <string name="action_restart">Restart</string>
+    <string name="action_main_menu">Main Menu</string>
+
+    <!-- Game over -->
+    <string name="game_over">GAME OVER</string>
+    <string name="new_high_score">NEW HIGH SCORE!</string>
+    <string name="best_score">BEST: %1$d</string>
+    <string name="achievement_unlocked">ACHIEVEMENT UNLOCKED!</string>
+    <string name="stat_total_taps">Total Taps</string>
+    <string name="stat_perfect_taps">Perfect Taps</string>
+    <string name="stat_highest_combo">Highest Combo</string>
+    <string name="stat_freeze_hits">Freeze Hits</string>
+    <string name="stat_armor_broken">Armor Broken</string>
+    <string name="stat_missed">Missed Targets</string>
+    <string name="action_play_again">Play Again</string>
+
+    <!-- Dialogs -->
+    <string name="leaderboard_title">Local High Scores</string>
+    <string name="leaderboard_empty">No games recorded yet. Play a round!</string>
+    <string name="leaderboard_score">%1$d pts</string>
+    <string name="leaderboard_detail">Combo: %1$dx • Perfect: %2$d</string>
+    <string name="achievements_title">Achievements</string>
+    <string name="themes_title">Visual Themes</string>
+    <string name="theme_equipped">EQUIPPED</string>
+    <string name="theme_unlocked">Unlocked</string>
+
+    <!-- In-game popups -->
+    <string name="popup_crack">CRACK!</string>
+    <string name="popup_missed">MISSED!</string>
+    <string name="popup_bomb_penalty">-3s PENALTY!</string>
+    <string name="popup_bomb_life">OUCH! -1 LIFE</string>
+    <string name="popup_fever">FEVER MODE! 2X POINTS</string>
+
+    <!-- Accessibility descriptions for game targets -->
+    <string name="target_standard">Standard target</string>
+    <string name="target_golden">Golden target</string>
+    <string name="target_heart">Extra life</string>
+    <string name="target_freeze">Freeze power-up</string>
+    <string name="target_bomb">Bomb, do not tap</string>
+
+    <!-- Achievements -->
+    <string name="ach_combo_master">Combo Master</string>
+    <string name="ach_combo_master_desc">Reach a 20x combo streak</string>
+    <string name="ach_centurion">Centurion</string>
+    <string name="ach_centurion_desc">Score 100+ points in a single run</string>
+    <string name="ach_freeze_specialist">Freeze Master</string>
+    <string name="ach_freeze_specialist_desc">Tap 5 Freeze targets in one run</string>
+    <string name="ach_zen_master">Zen Seeker</string>
+    <string name="ach_zen_master_desc">Tap 50 targets in Zen Mode</string>
+    <string name="ach_untouchable">Untouchable</string>
+    <string name="ach_untouchable_desc">Score 30+ points without losing any lives</string>
+    <string name="ach_speed_demon">Lightning Reflex</string>
+    <string name="ach_speed_demon_desc">Perform 10 perfect taps in a run</string>
+    <string name="ach_shield_breaker">Armor Piercer</string>
+    <string name="ach_shield_breaker_desc">Break 3 shielded targets</string>
+
+    <!-- Theme unlock hints -->
+    <string name="theme_hint_default">Unlocked by default</string>
+    <string name="theme_hint_combo">Reach a 20x Combo</string>
+    <string name="theme_hint_games">Play 3 games</string>
+    <string name="theme_hint_50">Score 50+ in any mode</string>
+    <string name="theme_hint_100">Score 100+ points</string>
 </resources>

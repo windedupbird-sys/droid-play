@@ -50,6 +50,9 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Unit tests
+        run: ./gradlew testDebugUnitTest --no-daemon
+
       - name: Build release AAB
         env:
           ADMOB_APP_ID: ${{ secrets.ADMOB_APP_ID }}

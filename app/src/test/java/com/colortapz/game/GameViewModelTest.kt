@@ -11,12 +11,16 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -112,6 +116,14 @@ class FakeHapticsManager : HapticsManager {
     }
 }
 
+/** Monotonic test clock: lets tests drive the game without sleeping. */
+class FakeClock(var millis: Long = 0L) {
+    fun now(): Long = millis
+    fun advance(deltaMs: Long) {
+        millis += deltaMs
+    }
+}
+
 @OptIn(ExperimentalCoroutinesApi::class)
 class GameViewModelTest {
 
@@ -119,7 +131,11 @@ class GameViewModelTest {
     private lateinit var storage: FakeGameStorage
     private lateinit var soundManager: FakeSoundManager
     private lateinit var hapticsManager: FakeHapticsManager
+    private lateinit var clock: FakeClock
     private lateinit var viewModel: GameViewModel
+
+    private val state: GameState
+        get() = viewModel.state.value
 
     @Before
     fun setUp() {
@@ -127,7 +143,8 @@ class GameViewModelTest {
         storage = FakeGameStorage()
         soundManager = FakeSoundManager()
         hapticsManager = FakeHapticsManager()
-        viewModel = GameViewModel(storage, soundManager, hapticsManager)
+        clock = FakeClock()
+        viewModel = GameViewModel(storage, soundManager, hapticsManager, clock::now)
     }
 
     @After
@@ -137,10 +154,10 @@ class GameViewModelTest {
 
     @Test
     fun initialState_isMenu() {
-        assertEquals(GamePhase.MENU, viewModel.state.phase)
-        assertEquals(0, viewModel.state.score)
-        assertEquals(3, viewModel.state.lives)
-        assertEquals(GameMode.CLASSIC, viewModel.state.gameMode)
+        assertEquals(GamePhase.MENU, state.phase)
+        assertEquals(0, state.score)
+        assertEquals(3, state.lives)
+        assertEquals(GameMode.CLASSIC, state.gameMode)
     }
 
     @Test
@@ -148,32 +165,32 @@ class GameViewModelTest {
         storage.saveHighScore(42, GameMode.TIME_ATTACK)
         viewModel.setGameMode(GameMode.TIME_ATTACK)
 
-        assertEquals(GameMode.TIME_ATTACK, viewModel.state.gameMode)
-        assertEquals(42, viewModel.state.highScore)
+        assertEquals(GameMode.TIME_ATTACK, state.gameMode)
+        assertEquals(42, state.highScore)
     }
 
     @Test
     fun startGame_setsPlayingPhaseAndSpawnsTarget() {
         viewModel.startGame(GameMode.CLASSIC)
-        assertEquals(GamePhase.PLAYING, viewModel.state.phase)
-        assertEquals(1, viewModel.state.targets.size)
-        assertEquals(0, viewModel.state.score)
-        assertEquals(3, viewModel.state.lives)
+        assertEquals(GamePhase.PLAYING, state.phase)
+        assertEquals(1, state.targets.size)
+        assertEquals(0, state.score)
+        assertEquals(3, state.lives)
     }
 
     @Test
     fun tapTarget_quickTap_scoresThreePointsPlusCombo() {
         viewModel.startGame()
-        val target = viewModel.state.targets.first()
+        val target = state.targets.first()
         val spawnTime = target.spawnedAtMs
 
         viewModel.tapTarget(target.id, now = spawnTime + 50L)
 
-        assertEquals(3, viewModel.state.score)
-        assertEquals(1, viewModel.state.combo)
-        assertEquals(1, viewModel.state.multiplier)
-        assertTrue(viewModel.state.targets.isEmpty())
-        assertEquals(3, viewModel.state.highScore)
+        assertEquals(3, state.score)
+        assertEquals(1, state.combo)
+        assertEquals(1, state.multiplier)
+        assertTrue(state.targets.isEmpty())
+        assertEquals(3, state.highScore)
         assertTrue(soundManager.playedEffects.contains(SoundEffect.PERFECT_TAP))
     }
 
@@ -192,18 +209,18 @@ class GameViewModelTest {
                 spawnedAtMs = now,
                 type = TargetType.STANDARD
             )
-            viewModel.state = viewModel.state.copy(targets = listOf(target))
+            viewModel.setStateForTest(state.copy(targets = listOf(target)))
             viewModel.tapTarget(target.id, now = now + 10L)
         }
 
-        assertEquals(5, viewModel.state.combo)
-        assertEquals(2, viewModel.state.multiplier)
+        assertEquals(5, state.combo)
+        assertEquals(2, state.multiplier)
     }
 
     @Test
     fun feverMode_triggersAt15Combo_andDoublesPoints() {
         viewModel.startGame()
-        viewModel.state = viewModel.state.copy(combo = 14)
+        viewModel.setStateForTest(state.copy(combo = 14))
 
         val now = 1000L
         val target = Target(
@@ -215,12 +232,12 @@ class GameViewModelTest {
             spawnedAtMs = now,
             type = TargetType.STANDARD
         )
-        viewModel.state = viewModel.state.copy(targets = listOf(target))
+        viewModel.setStateForTest(state.copy(targets = listOf(target)))
 
         viewModel.tapTarget("fever-trigger", now = now + 10L)
 
-        assertEquals(15, viewModel.state.combo)
-        assertTrue(viewModel.state.isFeverActive)
+        assertEquals(15, state.combo)
+        assertTrue(state.isFeverActive)
         assertTrue(soundManager.playedEffects.contains(SoundEffect.FEVER_START))
     }
 
@@ -240,32 +257,32 @@ class GameViewModelTest {
             hitsRequired = 2,
             currentHits = 0
         )
-        viewModel.state = viewModel.state.copy(targets = listOf(shieldedTarget))
+        viewModel.setStateForTest(state.copy(targets = listOf(shieldedTarget)))
 
         // First tap: cracks shield
         viewModel.tapTarget("shield-1", now = now + 50L)
-        assertEquals(1, viewModel.state.targets.size)
-        val cracked = viewModel.state.targets.first()
+        assertEquals(1, state.targets.size)
+        val cracked = state.targets.first()
         assertTrue(cracked.isCracked)
         assertEquals(1, cracked.currentHits)
         assertTrue(soundManager.playedEffects.contains(SoundEffect.SHIELD_CRACK))
 
         // Second tap: breaks shield and collects target
         viewModel.tapTarget("shield-1", now = now + 100L)
-        assertTrue(viewModel.state.targets.isEmpty())
-        assertEquals(1, viewModel.state.stats.shieldedTargetsBroken)
+        assertTrue(state.targets.isEmpty())
+        assertEquals(1, state.stats.shieldedTargetsBroken)
     }
 
     @Test
     fun timeAttackMode_timerCountdown_andGameOverOnTimeOut() {
         viewModel.startGame(GameMode.TIME_ATTACK)
-        assertEquals(60_000L, viewModel.state.timeRemainingMs)
+        assertEquals(60_000L, state.timeRemainingMs)
 
         // Advance 60.5 seconds
         viewModel.gameTick(now = 2000L, deltaMs = 60_500L)
 
-        assertEquals(GamePhase.GAME_OVER, viewModel.state.phase)
-        assertEquals(0L, viewModel.state.timeRemainingMs)
+        assertEquals(GamePhase.GAME_OVER, state.phase)
+        assertEquals(0L, state.timeRemainingMs)
     }
 
     @Test
@@ -281,15 +298,17 @@ class GameViewModelTest {
             spawnedAtMs = now,
             type = TargetType.BOMB
         )
-        viewModel.state = viewModel.state.copy(
-            targets = listOf(bomb),
-            timeRemainingMs = 40_000L
+        viewModel.setStateForTest(
+            state.copy(
+                targets = listOf(bomb),
+                timeRemainingMs = 40_000L
+            )
         )
 
         viewModel.tapTarget("bomb-ta", now = now + 50L)
 
-        assertEquals(37_000L, viewModel.state.timeRemainingMs)
-        assertEquals(0, viewModel.state.combo)
+        assertEquals(37_000L, state.timeRemainingMs)
+        assertEquals(0, state.combo)
         assertTrue(soundManager.playedEffects.contains(SoundEffect.BOMB_EXPLOSION))
     }
 
@@ -306,17 +325,21 @@ class GameViewModelTest {
             spawnedAtMs = now - 1500L,
             type = TargetType.STANDARD
         )
-        viewModel.state = viewModel.state.copy(
-            targets = listOf(expired),
-            combo = 5,
-            lives = Int.MAX_VALUE
+        viewModel.setStateForTest(
+            state.copy(
+                targets = listOf(expired),
+                combo = 5,
+                lives = Int.MAX_VALUE
+            )
         )
 
         viewModel.gameTick(now = now, deltaMs = 50L)
 
-        assertEquals(GamePhase.PLAYING, viewModel.state.phase)
-        assertEquals(5, viewModel.state.combo) // Zen mode does not break combo on miss
-        assertTrue(viewModel.state.targets.isEmpty())
+        assertEquals(GamePhase.PLAYING, state.phase)
+        assertEquals(5, state.combo) // Zen mode does not break combo on miss
+        // The expired target is gone. (A fresh one may spawn: the fake clock is
+        // past the spawn interval, which is the game working as intended.)
+        assertTrue(state.targets.none { it.id == "zen-exp" })
     }
 
     @Test
@@ -324,21 +347,21 @@ class GameViewModelTest {
         viewModel.startGame()
         val now = 1000L
 
-        // Achieve a 20 combo
-        viewModel.state = viewModel.state.copy(
-            score = 105,
-            stats = GameStats(
-                totalTaps = 120,
-                perfectTaps = 12,
-                maxCombo = 22,
-                freezeTargetsTapped = 6,
-                shieldedTargetsBroken = 4,
-                livesLost = 0
-            ),
-            lives = 1
+        viewModel.setStateForTest(
+            state.copy(
+                score = 105,
+                stats = GameStats(
+                    totalTaps = 120,
+                    perfectTaps = 12,
+                    maxCombo = 22,
+                    freezeTargetsTapped = 6,
+                    shieldedTargetsBroken = 4,
+                    livesLost = 0
+                ),
+                lives = 1
+            )
         )
 
-        // Bomb to trigger game over and evaluate achievements
         val bomb = Target(
             id = "deadly-bomb",
             xFraction = 0.5f,
@@ -348,10 +371,10 @@ class GameViewModelTest {
             spawnedAtMs = now,
             type = TargetType.BOMB
         )
-        viewModel.state = viewModel.state.copy(targets = listOf(bomb))
+        viewModel.setStateForTest(state.copy(targets = listOf(bomb)))
         viewModel.tapTarget("deadly-bomb", now = now + 50L)
 
-        assertEquals(GamePhase.GAME_OVER, viewModel.state.phase)
+        assertEquals(GamePhase.GAME_OVER, state.phase)
         val unlocked = storage.getUnlockedAchievements()
         assertTrue(unlocked.contains(AchievementId.COMBO_MASTER))
         assertTrue(unlocked.contains(AchievementId.CENTURION))
@@ -359,7 +382,6 @@ class GameViewModelTest {
         assertTrue(unlocked.contains(AchievementId.SPEED_DEMON))
         assertTrue(unlocked.contains(AchievementId.SHIELD_BREAKER))
 
-        // Check leaderboard entry recorded
         val leaderboard = storage.getLeaderboard(GameMode.CLASSIC)
         assertEquals(1, leaderboard.size)
         assertEquals(105, leaderboard.first().score)
@@ -369,12 +391,11 @@ class GameViewModelTest {
     fun themeUnlock_andSwitching() {
         assertFalse(storage.isThemeUnlocked(ThemeId.CYBERPUNK))
 
-        // Unlock COMBO_MASTER
         storage.unlockAchievement(AchievementId.COMBO_MASTER)
         assertTrue(storage.isThemeUnlocked(ThemeId.CYBERPUNK))
 
         viewModel.setTheme(ThemeId.CYBERPUNK)
-        assertEquals(ThemeId.CYBERPUNK, viewModel.state.currentThemeId)
+        assertEquals(ThemeId.CYBERPUNK, state.currentThemeId)
         assertEquals(ThemeId.CYBERPUNK, storage.getSelectedTheme())
     }
 
@@ -385,7 +406,6 @@ class GameViewModelTest {
         assertFalse(viewModel.isSoundEnabled?.value == true)
 
         viewModel.startGame()
-        // Sound effect should not be added when sound is toggled off
         val countBefore = soundManager.playedEffects.size
         soundManager.play(SoundEffect.TAP)
         assertEquals(countBefore, soundManager.playedEffects.size)
@@ -403,5 +423,119 @@ class GameViewModelTest {
             assertEquals('F'.code.toByte(), wav[2])
             assertEquals('F'.code.toByte(), wav[3])
         }
+    }
+
+    // --- lifecycle / regression tests -------------------------------------
+
+    @Test
+    fun backgroundingPausesTheRun_andDoesNotLoseProgress() {
+        viewModel.startGame()
+        viewModel.setStateForTest(state.copy(score = 17, combo = 4))
+
+        viewModel.onAppBackgrounded()
+
+        assertEquals(GamePhase.PAUSED, state.phase)
+        assertEquals(17, state.score)
+        assertEquals(4, state.combo)
+        // High score is persisted on the way out, not only on game over.
+        assertEquals(17, storage.getHighScore(GameMode.CLASSIC))
+    }
+
+    @Test
+    fun backgroundingWhileInMenuIsHarmless() {
+        viewModel.onAppBackgrounded()
+        assertEquals(GamePhase.MENU, state.phase)
+    }
+
+    @Test
+    fun pausedRun_doesNotAdvanceTheClock() {
+        viewModel.startGame(GameMode.TIME_ATTACK)
+        viewModel.pauseGame()
+        val before = state.timeRemainingMs
+
+        // The loop skips gameTick while paused; simulate a long background gap.
+        clock.advance(30_000L)
+        viewModel.onAppBackgrounded()
+
+        assertEquals(before, state.timeRemainingMs)
+        assertEquals(GamePhase.PAUSED, state.phase)
+    }
+
+    @Test
+    fun highScoreIsNotWrittenOnEveryTap() {
+        viewModel.startGame()
+        var writes = 0
+        val counting = object : GameScoreStorage by storage {
+            override fun saveHighScore(score: Int, mode: GameMode) {
+                writes += 1
+                storage.saveHighScore(score, mode)
+            }
+        }
+        val vm = GameViewModel(counting, soundManager, hapticsManager, clock::now)
+        vm.startGame()
+        repeat(5) {
+            val target = vm.state.value.targets.firstOrNull() ?: return@repeat
+            vm.tapTarget(target.id, now = target.spawnedAtMs + 10L)
+        }
+        assertEquals(0, writes)
+    }
+
+    @Test
+    fun gameCompleted_emitsExactlyOncePerRun() = runTest(testDispatcher) {
+        val events = mutableListOf<Unit>()
+        val collector = backgroundScope.launch {
+            viewModel.gameCompleted.collect { events.add(it) }
+        }
+        runCurrent()
+
+        viewModel.startGame()
+        viewModel.setStateForTest(state.copy(score = 5, lives = 1))
+        val bomb = Target(
+            id = "final-bomb",
+            xFraction = 0.5f,
+            yFraction = 0.5f,
+            color = Color.Black,
+            maxLifetimeMs = 2000L,
+            spawnedAtMs = 1000L,
+            type = TargetType.BOMB
+        )
+        viewModel.setStateForTest(state.copy(targets = listOf(bomb)))
+        viewModel.tapTarget("final-bomb", now = 1050L)
+        runCurrent()
+
+        assertEquals(GamePhase.GAME_OVER, state.phase)
+        assertEquals(1, events.size)
+
+        // Re-reading the finished state (what an Activity recreation does) must
+        // not produce a second event.
+        runCurrent()
+        assertEquals(1, events.size)
+        collector.cancel()
+    }
+
+    @Test
+    fun entityIds_areUnique() {
+        val a = Target(
+            xFraction = 0.5f, yFraction = 0.5f, color = Color.Red,
+            maxLifetimeMs = 1000L, spawnedAtMs = 0L
+        )
+        val b = Target(
+            xFraction = 0.5f, yFraction = 0.5f, color = Color.Red,
+            maxLifetimeMs = 1000L, spawnedAtMs = 0L
+        )
+        assertNotEquals(a.id, b.id)
+        assertTrue(a.id.startsWith("target-"))
+    }
+
+    @Test
+    fun tapTarget_ignoredWhenNotPlaying() {
+        viewModel.startGame()
+        val id = state.targets.first().id
+        viewModel.pauseGame()
+
+        viewModel.tapTarget(id, now = 100L)
+
+        assertEquals(1, state.targets.size)
+        assertEquals(0, state.score)
     }
 }
