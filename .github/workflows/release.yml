@@ -31,7 +31,16 @@ jobs:
           cache: gradle
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        # android-actions/setup-android@v3 fails on current runners: its
+        # `sdkmanager tools` call no longer resolves in cmdline-tools 16.
+        # The hosted image already ships an SDK, so just top up the components.
+        run: |
+          SDK="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
+          SDKMGR=$(find "$SDK" -name sdkmanager -type f | head -1)
+          yes | "$SDKMGR" --licenses > /dev/null 2>&1 || true
+          "$SDKMGR" "platforms;android-36" "build-tools;35.0.0" "build-tools;36.0.0" || true
 
       - name: Decode release keystore
         run: |
