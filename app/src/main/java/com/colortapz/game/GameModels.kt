@@ -1,7 +1,17 @@
 package com.colortapz.game
 
+import androidx.annotation.StringRes
 import androidx.compose.ui.graphics.Color
-import java.util.UUID
+import java.util.concurrent.atomic.AtomicLong
+
+/**
+ * Entity ids only need to be unique within a run, so a monotonic counter is
+ * enough. UUID.randomUUID() allocated a fresh String per target, particle and
+ * popup - at 10 particles per tap that was pure GC churn on every tap.
+ */
+private val entityIdCounter = AtomicLong(0L)
+
+internal fun nextEntityId(prefix: String): String = "$prefix-${entityIdCounter.incrementAndGet()}"
 
 enum class GamePhase {
     MENU,
@@ -71,7 +81,7 @@ enum class TargetBehavior {
 }
 
 data class Target(
-    val id: String = UUID.randomUUID().toString(),
+    val id: String = nextEntityId("target"),
     val xFraction: Float,
     val yFraction: Float,
     val color: Color,
@@ -89,7 +99,7 @@ data class Target(
 }
 
 data class TapParticle(
-    val id: String = UUID.randomUUID().toString(),
+    val id: String = nextEntityId("particle"),
     val xFraction: Float,
     val yFraction: Float,
     val color: Color,
@@ -100,8 +110,10 @@ data class TapParticle(
 )
 
 data class ScorePopup(
-    val id: String = UUID.randomUUID().toString(),
-    val text: String,
+    val id: String = nextEntityId("popup"),
+    val text: String = "",
+    /** Non-zero when the label comes from strings.xml so it can be localised. */
+    @StringRes val textRes: Int = 0,
     val xFraction: Float,
     val yFraction: Float,
     val color: Color,
@@ -208,7 +220,7 @@ enum class AchievementId(
 }
 
 data class LeaderboardEntry(
-    val id: String = UUID.randomUUID().toString(),
+    val id: String = nextEntityId("entry"),
     val mode: GameMode,
     val score: Int,
     val maxCombo: Int,

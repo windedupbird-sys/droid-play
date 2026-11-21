@@ -1,9 +1,12 @@
-What's new in Color Tap v1.2.0:
-• 3 Game Modes: Classic Survival, 60s Time Attack, and Relaxing Zen Mode
-• Procedural synthesizer sound effects & tactile Android haptic feedback
-• Multiplier combos and explosive Fever Mode
-• Special target varieties: Golden bonuses, Heart heals, Freeze slowdowns, moving targets, shielded circles, and Bomb hazards
-• Unlockable visual themes: Classic Neon, Cyberpunk, Pastel Dream, Sunset Glow, and Retro Arcade
-• In-game Achievements system & Local Top 5 Leaderboards per mode
-• Performance and responsiveness optimizations
+What's new in Color Tap v1.3.0:
+• The game now pauses automatically when you leave the app — no more losing a run to a phone call or a notification
+• Fixed the timer and target lifetimes drifting if the device clock changed
+• Ads now respect a steadier rhythm and no longer interrupt at random
+• The back button behaves as expected: pause during a run, leave the menu otherwise
+• Crisper, redrawn interface icons that look the same on every device
+• Bigger touch targets and screen-reader labels on every button
+• Targets scale up properly on tablets and large screens
+• Score pop-ups are now readable on every target colour
+• Fixes a bug where the ad counter advanced when rotating the device
+• Performance: less battery drain while playing, fewer stutters
 • Offline play fully supported
